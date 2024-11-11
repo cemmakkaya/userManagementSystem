@@ -21,7 +21,6 @@ public class UserRepository {
                 currentConnection.close();
             }
         } catch (SQLException e) {
-            // Ignoriere Fehler beim Schließen
         }
     }
 
@@ -29,13 +28,11 @@ public class UserRepository {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
             Statement stmt = conn.createStatement();
 
-            // Lösche existierende Tabellen in der richtigen Reihenfolge
             stmt.execute("DROP TABLE IF EXISTS role_permissions");
             stmt.execute("DROP TABLE IF EXISTS users");
             stmt.execute("DROP TABLE IF EXISTS permissions");
             stmt.execute("DROP TABLE IF EXISTS roles");
 
-            // Erstelle Tabellen neu
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS roles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +68,6 @@ public class UserRepository {
                 )
             """);
 
-            // Füge Standard-Rollen hinzu
             stmt.execute("INSERT OR IGNORE INTO roles (name) VALUES ('ADMIN')");
             stmt.execute("INSERT OR IGNORE INTO roles (name) VALUES ('USER')");
 
@@ -125,7 +121,6 @@ public class UserRepository {
             stmt.setString(1, role.getName());
             stmt.executeUpdate();
 
-            // ID abfragen
             Statement idStmt = conn.createStatement();
             ResultSet rs = idStmt.executeQuery("SELECT last_insert_rowid()");
 
@@ -140,7 +135,6 @@ public class UserRepository {
 
     public User saveUser(User user) {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
-            // Prüfe ob Username bereits existiert
             PreparedStatement checkStmt = conn.prepareStatement(
                     "SELECT id FROM users WHERE username = ?"
             );
@@ -149,7 +143,6 @@ public class UserRepository {
                 throw new IllegalArgumentException("Username existiert bereits");
             }
 
-            // Prüfe ob Email bereits existiert
             checkStmt = conn.prepareStatement(
                     "SELECT id FROM users WHERE email = ?"
             );
@@ -158,7 +151,6 @@ public class UserRepository {
                 throw new IllegalArgumentException("Email existiert bereits");
             }
 
-            // Füge den neuen User ein
             PreparedStatement stmt = conn.prepareStatement("""
                 INSERT INTO users (username, email, role_id) 
                 VALUES (?, ?, ?)
@@ -174,7 +166,6 @@ public class UserRepository {
                 throw new SQLException("Creating user failed, no rows affected.");
             }
 
-            // Hole die generierte ID
             try (Statement idStmt = conn.createStatement();
                  ResultSet rs = idStmt.executeQuery("SELECT last_insert_rowid()")) {
                 if (rs.next()) {
@@ -184,7 +175,6 @@ public class UserRepository {
                 }
             }
 
-            // Hole den kompletten User mit allen Daten
             try (PreparedStatement selectStmt = conn.prepareStatement("""
                 SELECT u.*, r.name as role_name 
                 FROM users u
@@ -217,7 +207,6 @@ public class UserRepository {
 
     public void deleteUser(Long userId) {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
-            // Prüfen ob es der letzte Admin ist
             PreparedStatement checkStmt = conn.prepareStatement("""
                 SELECT COUNT(*) as admin_count 
                 FROM users u 
@@ -229,7 +218,6 @@ public class UserRepository {
             if (rs.next()) {
                 int adminCount = rs.getInt("admin_count");
 
-                // Prüfen ob der zu löschende User ein Admin ist
                 PreparedStatement userCheckStmt = conn.prepareStatement("""
                     SELECT r.name 
                     FROM users u 
@@ -244,7 +232,6 @@ public class UserRepository {
                 }
             }
 
-            // User löschen
             PreparedStatement deleteStmt = conn.prepareStatement(
                     "DELETE FROM users WHERE id = ?"
             );
@@ -261,7 +248,6 @@ public class UserRepository {
 
     public User updateUser(User user) {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
-            // Prüfen ob der Username bereits existiert (außer bei diesem User)
             PreparedStatement checkStmt = conn.prepareStatement(
                     "SELECT id FROM users WHERE username = ? AND id != ?"
             );
@@ -272,7 +258,6 @@ public class UserRepository {
                 throw new IllegalArgumentException("Username existiert bereits!");
             }
 
-            // Prüfen ob die Email bereits existiert (außer bei diesem User)
             checkStmt = conn.prepareStatement(
                     "SELECT id FROM users WHERE email = ? AND id != ?"
             );
@@ -283,7 +268,6 @@ public class UserRepository {
                 throw new IllegalArgumentException("Email existiert bereits!");
             }
 
-            // Prüfen ob es der letzte Admin ist und die Rolle geändert werden soll
             PreparedStatement roleCheckStmt = conn.prepareStatement("""
             SELECT r.name as current_role
             FROM users u 
@@ -308,7 +292,6 @@ public class UserRepository {
                 }
             }
 
-            // Update durchführen
             PreparedStatement updateStmt = conn.prepareStatement("""
             UPDATE users 
             SET username = ?, 
@@ -328,7 +311,6 @@ public class UserRepository {
                 throw new IllegalArgumentException("Benutzer mit ID " + user.getId() + " nicht gefunden.");
             }
 
-            // Den aktualisierten User zurückgeben
             return user;
         } catch (SQLException e) {
             throw new RuntimeException("Database error: " + e.getMessage(), e);
@@ -371,10 +353,8 @@ public class UserRepository {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
             Statement stmt = conn.createStatement();
 
-            // Prüfe Tabellen und deren Inhalte
             System.out.println("\n=== Datenbank Status ===");
 
-            // Prüfe Roles Tabelle
             ResultSet rs = stmt.executeQuery("SELECT * FROM roles");
             System.out.println("\nRollen:");
             while (rs.next()) {
@@ -382,7 +362,6 @@ public class UserRepository {
                         ", Name: " + rs.getString("name"));
             }
 
-            // Prüfe Users Tabelle
             rs = stmt.executeQuery("""
                 SELECT u.*, r.name as role_name 
                 FROM users u
@@ -396,7 +375,6 @@ public class UserRepository {
                         ", Role: " + rs.getString("role_name"));
             }
 
-            // Prüfe Permissions Tabelle
             rs = stmt.executeQuery("SELECT * FROM permissions");
             System.out.println("\nBerechtigungen:");
             while (rs.next()) {
@@ -405,7 +383,6 @@ public class UserRepository {
                         ", Description: " + rs.getString("description"));
             }
 
-            // Prüfe Role-Permissions Verknüpfungen
             rs = stmt.executeQuery("""
                 SELECT r.name as role_name, p.name as permission_name
                 FROM role_permissions rp
@@ -426,7 +403,6 @@ public class UserRepository {
 
     public Permission createPermission(String name, String description) {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
-            // Erst das Permission-Objekt einfügen
             PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO permissions (name, description) VALUES (?, ?)"
             );
@@ -435,7 +411,6 @@ public class UserRepository {
             stmt.setString(2, description);
             stmt.executeUpdate();
 
-            // Dann die ID abfragen
             Statement idStmt = conn.createStatement();
             ResultSet rs = idStmt.executeQuery("SELECT last_insert_rowid()");
 
@@ -509,7 +484,6 @@ public class UserRepository {
 
     public Role getRoleWithPermissions(Long roleId) {
         try (Connection conn = DriverManager.getConnection(dbUrl)) {
-            // Get role
             PreparedStatement roleStmt = conn.prepareStatement(
                     "SELECT * FROM roles WHERE id = ?"
             );
@@ -522,7 +496,6 @@ public class UserRepository {
                         roleRs.getString("name")
                 );
 
-                // Get permissions for role
                 PreparedStatement permStmt = conn.prepareStatement("""
                     SELECT p.* FROM permissions p
                     JOIN role_permissions rp ON p.id = rp.permission_id

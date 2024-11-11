@@ -157,7 +157,6 @@ public class Main {
     private static void addPermissionToRole() {
         System.out.println("\n=== Berechtigung zu Rolle hinzufügen ===");
 
-        // Zeige verfügbare Rollen
         List<Role> roles = repository.getAllRoles();
         System.out.println("\nVerfügbare Rollen:");
         for (Role role : roles) {
@@ -168,7 +167,6 @@ public class Main {
         try {
             Long roleId = Long.parseLong(scanner.nextLine());
 
-            // Zeige verfügbare Berechtigungen
             List<Permission> permissions = repository.getAllPermissions();
             System.out.println("\nVerfügbare Berechtigungen:");
             for (Permission permission : permissions) {
@@ -191,7 +189,6 @@ public class Main {
     private static void removePermissionFromRole() {
         System.out.println("\n=== Berechtigung von Rolle entfernen ===");
 
-        // Zeige verfügbare Rollen
         List<Role> roles = repository.getAllRoles();
         System.out.println("\nVerfügbare Rollen:");
         for (Role role : roles) {
@@ -286,7 +283,6 @@ public class Main {
 
 
     private static void clearScreen() {
-        // Fügt Leerzeilen ein, um den Bildschirm "zu leeren"
         System.out.println("\n".repeat(50));
     }
 
@@ -298,12 +294,10 @@ public class Main {
 
         if (confirm.equalsIgnoreCase("j")) {
             try {
-                // Schließe zuerst alle Datenbankverbindungen
                 if (repository != null) {
                     repository.closeConnections();
                 }
 
-                // Lösche die Datenbankdatei
                 File dbFile = new File("users.db");
                 if (dbFile.exists()) {
                     if (!dbFile.delete()) {
@@ -311,35 +305,28 @@ public class Main {
                     }
                 }
 
-                // Erstelle neue Repository-Instanz
                 repository = new UserRepository("jdbc:sqlite:users.db");
                 service = new UserService(repository);
 
-                // Erstelle Standardberechtigungen
                 Permission readPerm = repository.createPermission("READ", "Daten lesen");
                 Permission writePerm = repository.createPermission("WRITE", "Daten schreiben");
                 Permission deletePerm = repository.createPermission("DELETE", "Daten löschen");
                 Permission adminPerm = repository.createPermission("ADMIN", "Administrative Rechte");
 
-                // Erstelle Standardrollen
                 Role adminRole = new Role(1L, "ADMIN");
                 repository.saveRole(adminRole);
 
                 Role userRole = new Role(2L, "USER");
                 repository.saveRole(userRole);
 
-                // Füge Berechtigungen zu Rollen hinzu
-                // Admin bekommt alle Rechte
                 repository.addPermissionToRole(adminRole.getId(), readPerm.getId());
                 repository.addPermissionToRole(adminRole.getId(), writePerm.getId());
                 repository.addPermissionToRole(adminRole.getId(), deletePerm.getId());
                 repository.addPermissionToRole(adminRole.getId(), adminPerm.getId());
 
-                // User bekommt Basis-Rechte
                 repository.addPermissionToRole(userRole.getId(), readPerm.getId());
                 repository.addPermissionToRole(userRole.getId(), writePerm.getId());
 
-                // Erstelle Standardbenutzer
                 service.createUser("admin", "admin@test.com", adminRole);
                 service.createUser("user", "user@test.com", userRole);
 
@@ -361,7 +348,6 @@ public class Main {
         clearScreen();
         System.out.println("=== Benutzer bearbeiten ===");
 
-        // Zeige alle Benutzer
         List<User> users = repository.findAllUsers();
         if (users.isEmpty()) {
             System.out.println("Keine Benutzer vorhanden!");
@@ -411,7 +397,6 @@ public class Main {
         clearScreen();
         System.out.println("=== Benutzer löschen ===");
 
-        // Zeige alle Benutzer
         List<User> users = repository.findAllUsers();
         if (users.isEmpty()) {
             System.out.println("Keine Benutzer vorhanden!");
@@ -452,7 +437,6 @@ public class Main {
         clearScreen();
         System.out.println("=== Benutzerrolle ändern ===");
 
-        // Zeige alle Benutzer
         List<User> users = repository.findAllUsers();
         if (users.isEmpty()) {
             System.out.println("Keine Benutzer vorhanden!");
